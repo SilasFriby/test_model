@@ -72,7 +72,7 @@ points(time_fsa[1:(n - 1)], zcb_fsa[1:(n - 1)])
 
 #### solve 5.2.3 and 5.2.5
 
-rho <- 0
+rho <- 0.7
 beta1 <- function(t) c(0.02, 0)
 beta2 <- function(t) c(0, 0.02)
 sigma1 <- function(t) 0.005
@@ -282,7 +282,7 @@ fwd_r <- function(s) A_r(s) + x_0 %*% c(B_1_r(s), B_2_r(s))
 A_n <- approxfun(time, result_A_k2)
 B_1_n <- approxfun(time, result_B_1_k2)
 B_2_n <- approxfun(time, result_B_2_k2)
-fwd_n <- function(s) A_n(s) + x_0 %*% c(B_1_n(s), B_2_n(s))
+fwd_n <- function(s) A_n(s) + x_0[1] * B_1_n(s) + x_0[2] * B_2_n(s)
 
 plot(time, sapply(time, function(s) fwd_r(s)), type = 'l')
 points(time, sapply(time, function(s) fwd_rate_fct(s)))
@@ -290,6 +290,23 @@ points(time, sapply(time, function(s) fwd_rate_fct(s)))
 plot(time, sapply(time, function(s) fwd_n(s)), type = 'l')
 points(time, sapply(time, function(s) base_surrender(s)))
 
+
+#### table 5.2
+
+r <- 0.01
+u <- function(t, maturity, r) exp(-r * (maturity - t))
+phi <- approxfun(time, result_phi) 
+psi_1 <- approxfun(time, result_psi_1) 
+psi_2 <- approxfun(time, result_psi_2)
+
+integrand <- function(s) {
+  exp(phi(s) - (psi_1(s) * x_0[1] + psi_2(s) * x_0[2])) * fwd_n(s) * u(s, maturity = projectionYears, r = r)
+}
+plot(time, sapply(time, function(i) integrand(i)))
+
+u(0, maturity = projectionYears, r = r)
+v <- integrate(integrand, 0, projectionYears)$v + exp(phi(projectionYears) - (psi_1(projectionYears) * x_0[1] + psi_2(projectionYears) * x_0[2]))
+v
 
 
 
