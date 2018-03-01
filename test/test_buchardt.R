@@ -90,6 +90,14 @@ bDis <- matrix(0, nStatesTech, nStatesTech)
 
 #### 1. order reserve at different times given active
 
+fair_premium <- uniroot(function(p){
+  rksolve(c(0, 0, 0),
+          function(t, x) thiele(t, x, p, bCont, bDis, intensityListTech$mu, rate_tech),
+          rev(time))$xHist[721, 1]
+  },
+  c(-1, 10^5)
+)$r
+
 reserve_tech <- rksolve(c(0, 0, 0),
                         function(t, x) thiele(t, x, premium, bCont, bDis, intensityListTech$mu, rate_tech),
                         rev(time))$xHist[, 1]
@@ -102,8 +110,31 @@ reserve_tech_plus <- rev(reserve_tech_plus)
 
 reserve_first_order <- rbind(reserve_tech, reserve_tech_plus)
 
+#### test: find reserve_tech_plus given reserve_tech
+
+pMatrix_tech <-probabilityProjectionFct_FP(time = time, 
+                                           probInitial = c(1, 0, 0), 
+                                           stateCombi = c("12", "13", "21", "23"), 
+                                           nStates = 3,
+                                           intensityListTech$mu, 
+                                           w1Vector = rep(0, n), 
+                                           states_FP = states_FP)$pMatrix
 
 
+reserve_tech_plus_test <- sapply(1:n, function(i) {
+  
+  if (age + time[i] < age_retirement) {
+    index_retirement <- which(age + time == age_retirement) - 1
+    reserve_tech[i] + sum(1 / (1 + rate_tech) ^ (time[i:index_retirement] - time[i]) * pMatrix_tech[i:index_retirement] * premium) * dt
+  } else {
+    reserve_tech[i]
+  }
+  
+})
+
+plot(time, reserve_tech_plus_test, type = "l")
+points(time, reserve_tech)
+points(time, reserve_tech_plus)
 
 #### free policy factors - rho = 1. order reserve / 1. order benefit reserve
 
